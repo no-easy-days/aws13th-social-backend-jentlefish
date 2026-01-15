@@ -26,3 +26,37 @@ async def signup(user_in: CreateUser):
         "profile_image": user_in.profile_image,
         "created_at": datetime.now()
     }
+
+# 로그인
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=16)
+
+
+class TokenData(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+    expires_in: int = 3600
+    sign_in_at: datetime
+
+class LoginResponse(BaseModel):
+    status: str
+    data: TokenData
+
+@app.post("/auth/token", response_model=LoginResponse)
+async def login_access_token(
+        token_in: LoginRequest,
+        authorization: Annotated[str | None, Header()] = None
+):
+
+    return {
+        "status": "success",
+        "data": {
+            "access_token": "temp_access_token",
+            "refresh_token": "temp_refresh_token",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+            "sign_in_at": datetime.now()
+        }
+    }
