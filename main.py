@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, Header
+from fastapi import FastAPI, Body, Header, Path
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated
 from datetime import datetime
@@ -14,7 +14,7 @@ class CreateUser(BaseModel):
 
 class UserResponse(BaseModel):
     email: EmailStr
-    nickname: str
+    nickname: str = Field(min_length=4, max_length=8)
     profile_image: Optional[str] = None
     created_at: datetime
 
@@ -58,5 +58,89 @@ async def login_access_token(
             "token_type": "Bearer",
             "expires_in": 3600,
             "sign_in_at": datetime.now()
+        }
+    }
+
+# 프로필 조회
+class ProfileResponseData(BaseModel):
+    email: EmailStr
+    nickname: str = Field(min_length=4, max_length=8)
+    profile_image: Optional[str] = None
+    created_at: datetime
+
+class ProfileResponse(BaseModel):
+    status: str
+    data: ProfileResponseData
+
+@app.get("/users/{nickname}", response_model=ProfileResponse)
+async def get_profile(nickname: str):
+    return {
+        "status": "success",
+        "data": {
+            "email": "email",
+            "nickname": nickname,
+            "profile_image": "profile_image",
+            "created_at": "created_at"
+        }
+    }
+
+
+# 프로필 수정
+class EditProfile(BaseModel):
+    nickname: str = Field(min_length=4, max_length=8)
+    profile_image: Optional[str] = None
+    password: str = Field(min_length=8, max_length=16)
+
+class EditProfileData(BaseModel):
+    nickname: str = Field(min_length=4, max_length=8)
+    profile_image: Optional[str] = None
+    updated_at: datetime
+
+class EditProfileResponse(BaseModel):
+    status: str
+    data: EditProfileData
+
+@app.patch("/users/{nickname}", response_model=EditProfileResponse)
+async def update_profile(nickname: str):
+    return {
+        "status": "success",
+        "data": {
+            "nickname": nickname,
+            "profile_image": "profile_image",
+            "updated_at": datetime.now()
+        }
+    }
+
+# 회원 탈퇴
+class DeleteProfileResponse(BaseModel):
+    status: str
+    message: str
+
+@app.delete("/users/{nickname}", response_model=DeleteProfileResponse)
+async def delete_profile(deleted_user: DeleteProfileResponse):
+    return {
+        "status": "success",
+        "message": deleted_user.message
+    }
+
+# 특정 회원 조회
+class SearchData(BaseModel):
+    nickname: str = Field(min_length=4, max_length=8)
+    profile_image: Optional[str] = None
+    created_at: datetime
+
+class SearchResponse(BaseModel):
+    status: str
+    data: SearchData
+
+@app.get("/users/{nickname}", response_model=SearchResponse)
+async def get_profile(
+        nickname: Annotated[str, Path(min_length=4, max_length=8)],):
+    return{
+        "status": "success",
+        "data": {
+            "nickname": nickname,
+            "profile_image": "profile_image",
+            "created_at": datetime.now()
         }
     }

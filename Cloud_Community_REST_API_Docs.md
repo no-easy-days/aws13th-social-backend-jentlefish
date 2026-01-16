@@ -505,7 +505,7 @@ Path Parameter
 **Error (204 Not Content)**
 
 ```json
-{}
+
 ```
 
 ---
@@ -943,9 +943,9 @@ PATCH`/users/{nickname}`
 
 Path Parameter
 
-| 파라미터 | 타입 | 필수 | 설명 |
-| --- | --- | --- | --- |
-| id | integer | ✅ | 사용자 계정의 고유 식별자입니다. |
+| 파라미터     | 타입 | 필수 | 설명 |
+|----------| --- | --- | --- |
+| nickname | integer | ✅ | 사용자 계정의 고유 식별자입니다. |
 
 **Request Body**
 
