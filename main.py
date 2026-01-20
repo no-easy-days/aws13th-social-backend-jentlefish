@@ -1,5 +1,5 @@
-import status
-from fastapi import FastAPI, Header, Path, Depends, Query
+
+from fastapi import FastAPI, Header, Path, Depends, Query, status
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated, Literal, List
 from datetime import datetime
@@ -201,7 +201,7 @@ class PostDetailResponse(BaseModel):
     status: str
     data: PostDetailItem | None = None
 
-@app.get("/posts/search", response_model=PostListResponse)
+@app.get("/posts/search", response_model=PostDetailResponse)
 async def search_post(
     params: SearchDetailQuery = Depends()
 ):
@@ -284,8 +284,8 @@ async def get_post(
 
 # 게시글 작성
 class PostCreateRequest(BaseModel):
-    title: str = Field(..., min_length=1, max_length=100)
-    post: str = Field(..., min_length=1, max_length=1000, alias="content") # 명세서 Body엔 post라 되어있으나 설명엔 content 혼용, 코드상 일치 필요
+    title: str = Field(min_length=1, max_length=100)
+    post: str = Field(min_length=1, max_length=1000, alias="content")
 
 class PostCreateData(BaseModel):
     post_id: int
@@ -299,15 +299,14 @@ class PostCreateResponse(BaseModel):
 
 @app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=PostCreateResponse)
 async def create_post(
-    request: PostCreateRequest,
-    authorization: str = Header(..., description="Bearer {token}")
+    request: PostCreateRequest
 ):
     return {
         "status": "success",
         "data": {
-            "post_id": "124567890",
-            "title": "새 게시글 제목",
-            "post": "새 게시글 내용",
+            "post_id": 124567890,
+            "title": request.title,
+            "post": request.post,
             "created_post_at": "2026-01-04T12:00:00Z"
         }
     }
