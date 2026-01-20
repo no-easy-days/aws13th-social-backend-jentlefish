@@ -537,3 +537,141 @@ async def get_my_comments(
             "sort": "created_at"
         }
     }
+
+
+# 좋아요 등록
+# TODO: Authorization
+class LikeRequest(BaseModel):
+    like: bool
+
+class LikeRegistrationData(BaseModel):
+    title: str
+    like_count: int
+    created_at: datetime
+
+class LikeRegistrationResponse(BaseModel):
+    status: str
+    data: LikeRegistrationData
+
+@app.post("/posts/{post_id}/likes", response_model=LikeRegistrationResponse)
+async def like_registration(
+        post_id: int,
+        request: LikeRequest
+):
+    return{
+        "status": "success",
+        "data": {
+            "title": "닉네임",
+            "like_count": 10,
+            "created_at": datetime.now()
+        }
+    }
+
+
+# 좋아요 취소
+class LikeCancelRequest(BaseModel):
+    like: bool
+
+class LikeCancelData(BaseModel):
+    title: str
+    like_count: int
+    created_at: datetime
+
+class LikeCancelResponse(BaseModel):
+    status: str
+    data: LikeCancelData
+
+@app.delete("/posts/{post_id}/likes", response_model=LikeCancelResponse)
+async def like_cancel(
+        post_id: int,
+        request: LikeCancelRequest
+):
+    return {
+        "status": "success",
+        "data": {
+            "title": "게시글 제목",
+            "like_count": 9,
+            "created_at": datetime.now()
+        }
+    }
+
+
+# 좋아요 상태 확인
+class LikeStatusPagination(BaseModel):
+    page: int
+    limit: int
+    sort: Literal["created_at", "like_total"] = "created_at"
+
+class LikeStatusItem(BaseModel):
+    title: str
+    like_count: int
+    like_total: int
+    created_at: datetime
+
+class LikeStatusResponse(BaseModel):
+    status: str
+    data: List[LikeStatusItem]
+    pagination: LikeStatusPagination
+
+@app.get("/users/{nickname}/posts/likes", response_model=LikeStatusResponse)
+async def get_likes(
+        page: int = Query(1, ge=1),
+        limit: int = Query(20, ge=1, le=100),
+        sort: str = Query("created_at")
+):
+    return{
+        "status": "success",
+        "data": [
+            {
+                "title": "게시물 제목",
+                "like_count": 10,
+                "like_total": 333,
+                "created_at": datetime.now()
+            }
+        ],
+        "pagination": {
+            "page": 1,
+            "limit": 20,
+            "sort": "created_at"
+        }
+    }
+
+
+# 내가 좋아요한 게시글 목록
+class ILikedListPagination(BaseModel):
+    page: int
+    limit: int
+    sort: Literal["liked_at", "created"] = "liked_at"
+    total: int
+
+class ILikedListItem(BaseModel):
+    title: str
+    like_count: int
+    created_at: datetime
+
+class ILikedListResponse(BaseModel):
+    status: str
+    data: List[ILikedListItem]
+    pagination: ILikedListPagination
+
+@app.get("/users/me/likes", response_model=ILikedListResponse)
+async def i_liked(
+        page: int = Query(1, ge=1),
+        limit: int = Query(20, ge=1, le=100),
+        sort: str = Query("liked_at")
+):
+    return{
+        "status": "success",
+        "data": [
+            {
+                "title": "게시글 제목",
+                "like_count": 10,
+                "created_at": datetime.now()
+            }
+        ],
+        "pagination": {
+            "page": 1,
+            "limit": 20,
+            "total": 100
+        }
+    }
