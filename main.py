@@ -1,12 +1,18 @@
 
-from fastapi import FastAPI, Header, Path, Depends, Query, status, Response
+from fastapi import FastAPI, Header, Path, Depends, Query, status, Response, HTTPException
+from jose.constants import ALGORITHMS
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Annotated, Literal, List
-from datetime import datetime
+from datetime import datetime, timedelta
+from jose import jwt
+from utils.data import load_data, save_data
+from passlib.context import CryptContext
 
 app = FastAPI()
 
 #회원가입
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 class CreateUser(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=16)
@@ -21,14 +27,34 @@ class UserResponse(BaseModel):
 
 @app.post("/users/", response_model=UserResponse)
 async def signup(user_in: CreateUser):
-    return{
+    users = load_data("users.json")
+    #이메일, 닉네임 중복 검사
+    for u in users:
+        if u["email"] == user_in.email:
+            raise HTTPException(status_code=400, detail="이미 존재하는 이메일입니다.")
+        if u["nickname"] == user_in.nickname:
+            raise HTTPException(status_code=400, detail="이미 존재하는 닉네임입니다.")
+
+    hashed_password = pwd_context.hash(user_in.password)
+
+    new_user = {
         "email": user_in.email,
+        "password": hashed_password,
         "nickname": user_in.nickname,
         "profile_image": user_in.profile_image,
         "created_at": datetime.now()
     }
 
+    users.append(new_user)
+    save_data("users.json", users)
+
+    return new_user
+
 # 로그인
+SECRET_KEY = "super-secret-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=16)
@@ -45,11 +71,40 @@ class LoginResponse(BaseModel):
     status: str
     data: TokenData
 
+fake_users_db = {
+    "test@example.com": {
+        "email": "test@example.com",
+        "hashed_password": "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeKkl.9TaH1/drNsPw2",
+        "id": 1
+    }
+}
+
+def verify_password(plain_password, hashed_password): # 입력받은 비번과 DB비번 일치 확인
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict): # JWT 토큰 생성
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 @app.post("/auth/token", response_model=LoginResponse)
 async def login_access_token(
         token_in: LoginRequest,
         authorization: Annotated[str | None, Header()] = None
 ):
+
+    user = fake_users_db.get(token_in.email)
+
+    if not user or not verify_password(token_in.password, user["hashed_password"]):
+        raise HTTPException(
+            status_code = status.HTTP_401_UNAUTHORIZED,
+            detail = "이메일 또는 비밀번호가 없습니다."
+        )
+
+    access_token = create_access_token(data={"sub": user["email"]})
+    refresh_token = create_access_token(data={"sub": user["email"], "type": "refresh"})
 
     return {
         "status": "success",
@@ -61,6 +116,7 @@ async def login_access_token(
             "sign_in_at": datetime.now()
         }
     }
+
 
 # 프로필 조회
 class ProfileResponseData(BaseModel):
@@ -209,6 +265,7 @@ async def search_post(
         "status": "success",
         "data": None
     }
+
 
 # 게시글 정렬
 class Pagination(BaseModel):
